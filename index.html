@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>dirty-martini</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --olive: #556b2f;
+      --gold: #c9a227;
+      --smoke: #1a1a1a;
+      --ghost: #e8e4dc;
+      --blood: #8b0000;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      background: var(--smoke);
+      color: var(--ghost);
+      font-family: 'Space Mono', monospace;
+      overflow-x: hidden;
+      cursor: crosshair;
+    }
+
+    /* ── NOISE OVERLAY ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 9999;
+    }
+
+    /* ── SCANLINES ── */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0,0,0,0.03) 2px,
+        rgba(0,0,0,0.03) 4px
+      );
+      pointer-events: none;
+      z-index: 9998;
+    }
+
+    /* ── HERO ── */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-bg {
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse at 20% 50%, rgba(85,107,47,0.15) 0%, transparent 60%),
+        radial-gradient(ellipse at 80% 20%, rgba(201,162,39,0.08) 0%, transparent 50%),
+        radial-gradient(ellipse at 50% 80%, rgba(139,0,0,0.06) 0%, transparent 50%);
+      animation: drift 20s ease-in-out infinite;
+    }
+
+    @keyframes drift {
+      0%, 100% { transform: scale(1) rotate(0deg); }
+      33% { transform: scale(1.05) rotate(0.5deg); }
+      66% { transform: scale(0.98) rotate(-0.3deg); }
+    }
+
+    .hero-title {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(3rem, 10vw, 8rem);
+      font-weight: 400;
+      font-style: italic;
+      letter-spacing: -0.02em;
+      text-align: center;
+      position: relative;
+      z-index: 1;
+      animation: fadeUp 2s ease-out;
+    }
+
+    .hero-title span {
+      display: block;
+      color: var(--gold);
+      opacity: 0.9;
+    }
+
+    .hero-sub {
+      font-size: 0.75rem;
+      letter-spacing: 0.5em;
+      text-transform: uppercase;
+      margin-top: 2rem;
+      opacity: 0.4;
+      z-index: 1;
+      animation: fadeUp 2s ease-out 0.5s both;
+    }
+
+    .origin-tag {
+      position: absolute;
+      bottom: 2rem;
+      right: 2rem;
+      font-size: 0.65rem;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      opacity: 0.2;
+      writing-mode: vertical-rl;
+      z-index: 1;
+    }
+
+    .scroll-hint {
+      position: absolute;
+      bottom: 3rem;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 1;
+      animation: pulse 3s ease-in-out infinite;
+    }
+
+    .scroll-hint div {
+      width: 1px;
+      height: 60px;
+      background: linear-gradient(to bottom, transparent, var(--gold), transparent);
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 0.3; }
+      50% { opacity: 0.8; }
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(30px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── SECTION DEFAULTS ── */
+    section {
+      padding: 8rem 2rem;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .section-label {
+      font-size: 0.6rem;
+      letter-spacing: 0.6em;
+      text-transform: uppercase;
+      color: var(--olive);
+      margin-bottom: 3rem;
+      opacity: 0;
+      transform: translateY(20px);
+      transition: all 1s ease-out;
+    }
+
+    .section-label.visible {
+      opacity: 0.7;
+      transform: translateY(0);
+    }
+
+    /* ── ABOUT ── */
+    .about-text {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(1.2rem, 3vw, 1.8rem);
+      line-height: 1.8;
+      font-style: italic;
+      color: var(--ghost);
+      opacity: 0;
+      transform: translateY(30px);
+      transition: all 1.2s ease-out 0.2s;
+    }
+
+    .about-text.visible {
+      opacity: 0.85;
+      transform: translateY(0);
+    }
+
+    .about-text .redacted {
+      background: var(--ghost);
+      color: var(--ghost);
+      padding: 0 0.3em;
+      border-radius: 2px;
+      cursor: help;
+      transition: all 0.6s ease;
+      user-select: none;
+    }
+
+    .about-text .redacted:hover {
+      background: transparent;
+      color: var(--blood);
+    }
+
+    .about-accent {
+      color: var(--gold);
+      font-style: normal;
+      font-weight: 700;
+    }
+
+    /* ── DIVIDER ── */
+    .divider {
+      width: 100%;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 0 2rem;
+    }
+
+    .divider hr {
+      border: none;
+      height: 1px;
+      background: linear-gradient(to right, transparent, var(--olive), transparent);
+      opacity: 0.3;
+    }
+
+    /* ── TRACKLIST ── */
+    .tracklist {
+      list-style: none;
+    }
+
+    .tracklist li {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      padding: 1.5rem 0;
+      border-bottom: 1px solid rgba(232,228,220,0.05);
+      opacity: 0;
+      transform: translateX(-20px);
+      transition: all 0.8s ease-out;
+      cursor: default;
+    }
+
+    .tracklist li.visible {
+      opacity: 1;
+      transform: translateX(0);
+    }
+
+    .tracklist li:hover {
+      padding-left: 1rem;
+      border-bottom-color: var(--gold);
+    }
+
+    .track-num {
+      font-size: 0.7rem;
+      opacity: 0.3;
+      min-width: 2rem;
+    }
+
+    .track-name {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.6rem;
+      flex: 1;
+      transition: color 0.3s;
+    }
+
+    .tracklist li:hover .track-name {
+      color: var(--gold);
+    }
+
+    .track-mood {
+      font-size: 0.6rem;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      opacity: 0.25;
+      text-align: right;
+      min-width: 8rem;
+    }
+
+    /* ── PLAYER EMBED ── */
+    .player-section {
+      padding: 4rem 2rem 8rem;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .player-wrapper {
+      position: relative;
+      border: 1px solid rgba(201,162,39,0.1);
+      padding: 1px;
+      opacity: 0;
+      transform: scale(0.98);
+      transition: all 1s ease-out;
+    }
+
+    .player-wrapper.visible {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    .player-wrapper::before {
+      content: 'NOW PLAYING';
+      position: absolute;
+      top: -0.5rem;
+      left: 1.5rem;
+      background: var(--smoke);
+      padding: 0 0.5rem;
+      font-size: 0.55rem;
+      letter-spacing: 0.4em;
+      color: var(--gold);
+      opacity: 0.5;
+    }
+
+    .player-wrapper iframe {
+      display: block;
+      width: 100%;
+    }
+
+
+    /* ── CTA ── */
+    .cta-section {
+      text-align: center;
+      padding: 10rem 2rem;
+    }
+
+    .cta-link {
+      display: inline-block;
+      font-family: 'Space Mono', monospace;
+      font-size: 0.7rem;
+      letter-spacing: 0.5em;
+      text-transform: uppercase;
+      color: var(--gold);
+      text-decoration: none;
+      padding: 1.2rem 3rem;
+      border: 1px solid rgba(201,162,39,0.3);
+      position: relative;
+      overflow: hidden;
+      transition: all 0.5s ease;
+    }
+
+    .cta-link:hover {
+      border-color: var(--gold);
+      background: rgba(201,162,39,0.05);
+      letter-spacing: 0.7em;
+    }
+
+    .cta-link::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 1px;
+      background: var(--gold);
+      transform: scaleX(0);
+      transform-origin: right;
+      transition: transform 0.5s ease;
+    }
+
+    .cta-link:hover::after {
+      transform: scaleX(1);
+      transform-origin: left;
+    }
+
+    /* ── FOOTER ── */
+    footer {
+      text-align: center;
+      padding: 4rem 2rem;
+      font-size: 0.6rem;
+      letter-spacing: 0.4em;
+      text-transform: uppercase;
+      opacity: 0.15;
+    }
+
+    /* ── FLOATING GLYPHS ── */
+    .glyph {
+      position: fixed;
+      font-family: 'Playfair Display', serif;
+      font-size: 15vw;
+      opacity: 0.015;
+      pointer-events: none;
+      z-index: -1;
+    }
+
+    .glyph-1 { top: 10%; left: -5%; transform: rotate(-15deg); }
+    .glyph-2 { top: 60%; right: -8%; transform: rotate(10deg); }
+    .glyph-3 { top: 35%; left: 50%; transform: rotate(-5deg); }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 600px) {
+      section { padding: 5rem 1.5rem; }
+      .show-item { grid-template-columns: 1fr; gap: 0.3rem; }
+      .track-mood { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Floating background glyphs -->
+  <div class="glyph glyph-1">&</div>
+  <div class="glyph glyph-2">d</div>
+  <div class="glyph glyph-3">•</div>
+
+  <!-- ══════════ HERO ══════════ -->
+  <section class="hero">
+    <div class="hero-bg"></div>
+    <h1 class="hero-title">
+      <span>dirty</span>
+      martini
+    </h1>
+    <p class="hero-sub">somewhere between the static</p>
+    <div class="origin-tag">Brussels — BE</div>
+    <div class="scroll-hint"><div></div></div>
+  </section>
+
+  <!-- ══════════ ABOUT ══════════ -->
+  <section id="about">
+    <p class="section-label">transmission</p>
+    <p class="about-text">
+      No face. No name. Just a signal bleeding through the noise from
+      <span class="about-accent">Belgium</span> — a phantom frequency that
+      surfaced on SoundCloud with four tracks and zero explanation.
+      The sound lands somewhere between late-night indie and
+      something that hasn't been named yet. Some say the project was born in
+      <span class="redacted">a warehouse in Brussels</span> during a power outage.
+      Others heard it started as a dare between strangers in a bar in
+      <span class="redacted">Madrid at 4 a.m.</span> — nobody kept receipts.
+      The only thing confirmed: the music exists, and it doesn't care
+      if you're listening.
+    </p>
+  </section>
+
+  <div class="divider"><hr></div>
+
+  <!-- ══════════ TRACKLIST ══════════ -->
+  <section id="tracks">
+    <p class="section-label">On the Rocks — tracklist</p>
+    <ul class="tracklist">
+      <li>
+        <span class="track-num">01</span>
+        <span class="track-name">Echoes</span>
+        <span class="track-mood">dissolving walls</span>
+      </li>
+      <li>
+        <span class="track-num">02</span>
+        <span class="track-name">Mind Race</span>
+        <span class="track-mood">3 a.m. spiral</span>
+      </li>
+      <li>
+        <span class="track-num">03</span>
+        <span class="track-name">Lust in Rhythm</span>
+        <span class="track-mood">pulse & pull</span>
+      </li>
+      <li>
+        <span class="track-num">04</span>
+        <span class="track-name">Circuit Feedback</span>
+        <span class="track-mood">signal decay</span>
+      </li>
+    </ul>
+  </section>
+
+  <!-- ══════════ PLAYER ══════════ -->
+  <div class="player-section">
+    <div class="player-wrapper">
+      <iframe
+        width="100%"
+        height="300"
+        scrolling="no"
+        frameborder="no"
+        allow="autoplay"
+        src="https://w.soundcloud.com/player/?url=https%3A%2F%2Fapi.soundcloud.com%2Fplaylists%2F1811141152&color=%23c9a227&auto_play=false&hide_related=true&show_comments=false&show_user=true&show_reposts=false&show_teaser=false&visual=true"
+      ></iframe>
+    </div>
+  </div>
+
+
+  <!-- ══════════ CTA ══════════ -->
+  <section class="cta-section">
+    <a href="https://soundcloud.com/dirty-dirty-martini" target="_blank" rel="noopener" class="cta-link">
+      Find the signal
+    </a>
+  </section>
+
+  <footer>
+    <p>dirty-martini &middot; identity unverified &middot; signal active</p>
+  </footer>
+
+  <!-- ══════════ SCROLL REVEAL ══════════ -->
+  <script>
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+        }
+      });
+    }, { threshold: 0.15 });
+
+    document.querySelectorAll(
+      '.section-label, .about-text, .tracklist li, .player-wrapper'
+    ).forEach(el => observer.observe(el));
+
+    // Stagger tracklist items
+    document.querySelectorAll('.tracklist li').forEach((li, i) => {
+      li.style.transitionDelay = `${i * 0.15}s`;
+    });
+
+    // Parallax
+    document.addEventListener('mousemove', (e) => {
+      const x = (e.clientX / window.innerWidth - 0.5) * 20;
+      const y = (e.clientY / window.innerHeight - 0.5) * 20;
+      document.querySelectorAll('.glyph').forEach((g, i) => {
+        const speed = (i + 1) * 0.3;
+        g.style.transform += ` translate(${x * speed}px, ${y * speed}px)`;
+        g.style.transform = g.style.transform.replace(/translate\([^)]+\)\s*translate/, 'translate');
+      });
+    });
+  </script>
+
+</body>
+</html>
